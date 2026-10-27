@@ -71,7 +71,9 @@ button.k.sel{background:var(--accent);color:var(--accent-fg);border-color:var(--
 @media (prefers-reduced-motion: reduce){#fx.run .fx-card,.cell.pop{animation:none}}
 .k.empty{border-color:transparent}
 #log{margin:0;padding-left:1.3em;font-size:.88rem}
+#log{list-style:none;padding-left:0}
 #log li{margin-bottom:2px}
+#log li:first-child{font-weight:700}
 .plist div{padding:3px 0}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;opacity:0;pointer-events:none;transition:.2s;max-width:90%;text-align:center}
 #toast.show{opacity:.95;transform:translateX(-50%) translateY(0)}
@@ -154,7 +156,7 @@ button.k.sel{background:var(--accent);color:var(--accent-fg);border-color:var(--
         <p id="overWait" class="muted">ホストの操作を待っています…</p>
       </div>
       <div class="box"><h2>50音表</h2><div id="kana"></div><p id="kanaHint" class="muted"></p></div>
-      <div class="box"><h2>ログ</h2><ol id="log"></ol></div>
+      <div class="box"><h2>ログ</h2><ul id="log"></ul></div>
     </div>
   </section>
 </div>
@@ -649,6 +651,21 @@ function playChime(){
     });
   } catch (e) {}
 }
+function playMiss(){   // ハズレの軽い効果音（下がる2音）
+  if (muted || !audio) return;
+  try {
+    const t = audio.currentTime;
+    [[392, 0], [262, 0.12]].forEach(([f, d]) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.16, t + d + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.2);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t + d); o.stop(t + d + 0.25);
+    });
+  } catch (e) {}
+}
 function playWarn(){   // 催促の警告音（入力待ちの本人にだけ鳴らす）
   if (muted || !audio) return;
   try {
@@ -733,10 +750,10 @@ function renderPlay(s, prev){
 
   renderKana(s, myTurn);
   // ヒット演出（直前の状態から1手だけ進んだときだけ）
-  if (s.ev && s.ev.hit && prev && s.ev.seq === (prev.ev ? prev.ev.seq : 0) + 1) playHit(s.ev);
+  if (s.ev && prev && s.ev.seq === (prev.ev ? prev.ev.seq : 0) + 1) { if (s.ev.hit) playHit(s.ev); else playMiss(); }
 
   // ログ
-  $('log').innerHTML = s.log.map(l => '<li>' + esc(l) + '</li>').join('');
+  $('log').innerHTML = s.log.slice().reverse().map(l => '<li>' + esc(l) + '</li>').join('');   // 新しいものが上
 }
 
 /* ================= 画面の操作 ================= */
